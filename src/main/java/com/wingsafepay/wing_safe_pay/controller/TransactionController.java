@@ -1,7 +1,7 @@
 package com.wingsafepay.wing_safe_pay.controller;
 
-import com.wingsafepay.dto.TransactionDTO;
-import com.wingsafepay.service.TransactionService;
+import com.wingsafepay.wing_safe_pay.dto.TransactionDTO;
+import com.wingsafepay.wing_safe_pay.service.TransactionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

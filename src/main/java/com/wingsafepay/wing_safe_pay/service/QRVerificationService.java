@@ -1,11 +1,11 @@
 package com.wingsafepay.wing_safe_pay.service;
 
-import com.wingsafepay.dto.QRCheckRequest;
-import com.wingsafepay.dto.QRCheckResponse;
-import com.wingsafepay.enums.RiskLevel;
-import com.wingsafepay.enums.TransactionCategory;
-import com.wingsafepay.model.Merchant;
-import com.wingsafepay.repository.MerchantRepository;
+import com.wingsafepay.wing_safe_pay.dto.QRCheckRequest;
+import com.wingsafepay.wing_safe_pay.dto.QRCheckResponse;
+import com.wingsafepay.wing_safe_pay.enums.RiskLevel;
+import com.wingsafepay.wing_safe_pay.enums.TransactionCategory;
+import com.wingsafepay.wing_safe_pay.model.Merchant;
+import com.wingsafepay.wing_safe_pay.repository.MerchantRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

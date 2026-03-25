@@ -1,8 +1,8 @@
 package com.wingsafepay.wing_safe_pay.controller;
 
-import com.wingsafepay.dto.QRCheckRequest;
-import com.wingsafepay.dto.QRCheckResponse;
-import com.wingsafepay.service.QRVerificationService;
+import com.wingsafepay.wing_safe_pay.dto.QRCheckRequest;
+import com.wingsafepay.wing_safe_pay.dto.QRCheckResponse;
+import com.wingsafepay.wing_safe_pay.service.QRVerificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

@@ -1,7 +1,7 @@
 package com.wingsafepay.wing_safe_pay.model;
 
-import com.wingsafepay.enums.RiskLevel;
-import com.wingsafepay.enums.TransactionCategory;
+import com.wingsafepay.wing_safe_pay.enums.RiskLevel;
+import com.wingsafepay.wing_safe_pay.enums.TransactionCategory;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;

@@ -1,7 +1,7 @@
 package com.wingsafepay.wing_safe_pay.dto;
 
-import com.wingsafepay.enums.RiskLevel;
-import com.wingsafepay.enums.TransactionCategory;
+import com.wingsafepay.wing_safe_pay.enums.RiskLevel;
+import com.wingsafepay.wing_safe_pay.enums.TransactionCategory;
 import lombok.Builder;
 import lombok.Data;
 import java.math.BigDecimal;
