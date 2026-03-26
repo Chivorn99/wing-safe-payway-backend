@@ -1,11 +1,8 @@
 spring:
-  application:
-    name: wing-safe-pay
-
   datasource:
-    url: jdbc:postgresql://localhost:5432/safepay_db
-    username: postgres
-    password: your_password
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -22,13 +19,10 @@ spring:
       mode: always
 
 server:
-  port: 8081
+  port: ${SERVER_PORT}
 
-#app:
-#  jwt:
-#    secret: safepay_super_secret_key_wing_bank_2026
-#    expiration: 86400000  # 24 hours in ms
+app:
+  jwt:
+    secret: ${JWT_SECRET}
+    expiration: ${JWT_EXPIRATION}
 
-# This port is for my personal machine
-#server:
-#  port: 8081

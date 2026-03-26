@@ -1,4 +1,9 @@
 package com.wingsafepay.wing_safe_pay.repository;
 
-public interface TransactionRepository {
+import com.wingsafepay.wing_safe_pay.model.Transaction;
+import org.springframework.data.jpa.repository.JpaRepository;
+import java.util.List;
+
+public interface TransactionRepository extends JpaRepository<Transaction, Long> {
+    List<Transaction> findByUserId(Long userId);
 }

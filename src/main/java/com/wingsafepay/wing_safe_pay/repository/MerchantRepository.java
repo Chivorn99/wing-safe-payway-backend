@@ -1,4 +1,9 @@
 package com.wingsafepay.wing_safe_pay.repository;
 
-public interface MerchantRepository {
+import com.wingsafepay.wing_safe_pay.model.Merchant;
+import org.springframework.data.jpa.repository.JpaRepository;
+import java.util.Optional;
+
+public interface MerchantRepository extends JpaRepository<Merchant, Long> {
+    Optional<Merchant> findByMerchantId(String merchantId);
 }
