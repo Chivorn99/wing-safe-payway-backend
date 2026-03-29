@@ -2,9 +2,7 @@ package com.wingsafepay.wing_safe_pay.model;
 
 import com.wingsafepay.wing_safe_pay.enums.SavingGoalStatus;
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -12,9 +10,10 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "saving_goals")
-@Getter
-@Setter
+@Data
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class SavingGoal {
 
     @Id
@@ -32,14 +31,21 @@ public class SavingGoal {
     private BigDecimal targetAmount;
 
     @Column(nullable = false, precision = 12, scale = 2)
-    private BigDecimal currentAmount = BigDecimal.ZERO;
+    private BigDecimal currentAmount;
 
     private LocalDate deadline;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private SavingGoalStatus status = SavingGoalStatus.ACTIVE;
+    private SavingGoalStatus status;
 
-    @Column(nullable = false)
-    private LocalDateTime createdAt = LocalDateTime.now();
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
+        if (this.currentAmount == null) this.currentAmount = BigDecimal.ZERO;
+        if (this.status == null) this.status = SavingGoalStatus.ACTIVE;
+    }
 }

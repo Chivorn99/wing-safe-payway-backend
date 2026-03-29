@@ -4,13 +4,11 @@ import com.wingsafepay.wing_safe_pay.enums.PaymentContext;
 import com.wingsafepay.wing_safe_pay.enums.RiskLevel;
 import com.wingsafepay.wing_safe_pay.enums.TransactionCategory;
 import com.wingsafepay.wing_safe_pay.enums.TransactionStatus;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
 
 import java.math.BigDecimal;
 
-@Getter
-@Setter
+@Data
 public class TransactionDTO {
     private String merchantId;
     private String recipientName;

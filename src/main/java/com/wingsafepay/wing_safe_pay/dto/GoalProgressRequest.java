@@ -1,12 +1,10 @@
 package com.wingsafepay.wing_safe_pay.dto;
 
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
 
 import java.math.BigDecimal;
 
-@Getter
-@Setter
+@Data
 public class GoalProgressRequest {
     private BigDecimal amount;
 }

@@ -1,9 +1,12 @@
 package com.wingsafepay.wing_safe_pay.controller;
 
+import com.wingsafepay.wing_safe_pay.dto.SpendingSummaryResponse;
 import com.wingsafepay.wing_safe_pay.dto.TransactionDTO;
+import com.wingsafepay.wing_safe_pay.model.Transaction;
 import com.wingsafepay.wing_safe_pay.service.TransactionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -16,17 +19,23 @@ public class TransactionController {
     private final TransactionService transactionService;
 
     @PostMapping
-    public ResponseEntity<TransactionDTO> save(@RequestBody TransactionDTO dto) {
-        return ResponseEntity.ok(transactionService.save(dto));
+    public ResponseEntity<Transaction> saveTransaction(
+            Authentication authentication,
+            @RequestBody TransactionDTO dto
+    ) {
+        String phoneNumber = authentication.getName();
+        return ResponseEntity.ok(transactionService.saveTransaction(phoneNumber, dto));
     }
 
-    @GetMapping("/user/{userId}")
-    public ResponseEntity<List<TransactionDTO>> getByUser(@PathVariable Long userId) {
-        return ResponseEntity.ok(transactionService.getByUser(userId));
+    @GetMapping("/me")
+    public ResponseEntity<List<Transaction>> getMyTransactions(Authentication authentication) {
+        String phoneNumber = authentication.getName();
+        return ResponseEntity.ok(transactionService.getUserTransactions(phoneNumber));
     }
 
-    @GetMapping("/user/{userId}/summary")
-    public ResponseEntity<?> getSummary(@PathVariable Long userId) {
-        return ResponseEntity.ok(transactionService.getCategorySummary(userId));
+    @GetMapping("/summary")
+    public ResponseEntity<SpendingSummaryResponse> getSummary(Authentication authentication) {
+        String phoneNumber = authentication.getName();
+        return ResponseEntity.ok(transactionService.getSummary(phoneNumber));
     }
 }

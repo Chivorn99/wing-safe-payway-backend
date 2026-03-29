@@ -1,14 +1,18 @@
 package com.wingsafepay.wing_safe_pay.dto;
 
 import com.wingsafepay.wing_safe_pay.enums.SavingGoalStatus;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Getter;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-@Getter
+@Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class SavingGoalResponse {
     private Long id;
     private String title;

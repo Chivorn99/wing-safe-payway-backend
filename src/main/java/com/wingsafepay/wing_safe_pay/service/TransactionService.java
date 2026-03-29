@@ -1,16 +1,21 @@
 package com.wingsafepay.wing_safe_pay.service;
 
+import com.wingsafepay.wing_safe_pay.dto.SpendingSummaryResponse;
 import com.wingsafepay.wing_safe_pay.dto.TransactionDTO;
+import com.wingsafepay.wing_safe_pay.enums.TransactionStatus;
+import com.wingsafepay.wing_safe_pay.model.Merchant;
 import com.wingsafepay.wing_safe_pay.model.Transaction;
 import com.wingsafepay.wing_safe_pay.model.User;
+import com.wingsafepay.wing_safe_pay.repository.MerchantRepository;
 import com.wingsafepay.wing_safe_pay.repository.TransactionRepository;
 import com.wingsafepay.wing_safe_pay.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -18,66 +23,62 @@ public class TransactionService {
 
     private final TransactionRepository transactionRepository;
     private final UserRepository userRepository;
+    private final MerchantRepository merchantRepository;
 
-    public TransactionDTO save(TransactionDTO dto) {
-        User user = userRepository.findById(dto.getUserId())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+    public Transaction saveTransaction(String phoneNumber, TransactionDTO dto) {
+        User user = userRepository.findByPhoneNumber(phoneNumber).orElseThrow();
 
         Transaction tx = Transaction.builder()
                 .user(user)
                 .recipientName(dto.getRecipientName())
-                .recipientBank(dto.getRecipientBank())
+                .bankName(dto.getBankName())
                 .amount(dto.getAmount())
                 .currency(dto.getCurrency())
-                .riskLevel(dto.getRiskLevel())
                 .category(dto.getCategory())
-                .proceeded(dto.isProceeded())
+                .riskLevel(dto.getRiskLevel())
+                .paymentContext(dto.getPaymentContext())
+                .status(dto.getStatus())
+                .note(dto.getNote())
                 .build();
 
-        transactionRepository.save(tx);
-        dto.setCreatedAt(tx.getCreatedAt());
-        return dto;
+        if (dto.getMerchantId() != null && !dto.getMerchantId().isBlank()) {
+            Merchant merchant = merchantRepository.findByMerchantId(dto.getMerchantId()).orElse(null);
+            tx.setMerchant(merchant);
+        }
+
+        return transactionRepository.save(tx);
     }
 
-    public List<TransactionDTO> getByUser(Long userId) {
-        return transactionRepository.findByUserId(userId)
-                .stream()
-                .map(tx -> {
-                    TransactionDTO dto = new TransactionDTO();
-                    dto.setUserId(userId);
-                    dto.setRecipientName(tx.getRecipientName());
-                    dto.setRecipientBank(tx.getRecipientBank());
-                    dto.setAmount(tx.getAmount());
-                    dto.setCurrency(tx.getCurrency());
-                    dto.setRiskLevel(tx.getRiskLevel());
-                    dto.setCategory(tx.getCategory());
-                    dto.setProceeded(tx.isProceeded());
-                    dto.setCreatedAt(tx.getCreatedAt());
-                    return dto;
-                })
-                .collect(Collectors.toList());
+    public List<Transaction> getUserTransactions(String phoneNumber) {
+        User user = userRepository.findByPhoneNumber(phoneNumber).orElseThrow();
+        return transactionRepository.findByUserOrderByCreatedAtDesc(user);
     }
 
-    public Map<String, Object> getCategorySummary(Long userId) {
-        List<Transaction> transactions = transactionRepository.findByUserId(userId);
+    public SpendingSummaryResponse getSummary(String phoneNumber) {
+        User user = userRepository.findByPhoneNumber(phoneNumber).orElseThrow();
+        List<Transaction> transactions = transactionRepository.findByUserOrderByCreatedAtDesc(user);
 
-        Map<String, Double> byCategory = transactions.stream()
-                .filter(tx -> tx.getCategory() != null && tx.getAmount() != null)
-                .collect(Collectors.groupingBy(
-                        tx -> tx.getCategory().name(),
-                        Collectors.summingDouble(tx -> tx.getAmount().doubleValue())
+        BigDecimal totalSpent = transactions.stream()
+                .filter(t -> t.getStatus() == TransactionStatus.PAID)
+                .map(Transaction::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        Map<String, BigDecimal> categoryBreakdown = new LinkedHashMap<>();
+        transactions.stream()
+                .filter(t -> t.getStatus() == TransactionStatus.PAID)
+                .forEach(t -> categoryBreakdown.merge(
+                        t.getCategory().name(),
+                        t.getAmount(),
+                        BigDecimal::add
                 ));
 
-        long totalTx = transactions.size();
-        long suspiciousCount = transactions.stream()
-                .filter(tx -> tx.getRiskLevel() != null &&
-                        tx.getRiskLevel().name().equals("HIGH_RISK"))
-                .count();
+        long blockedCount = transactionRepository.countByUserAndStatus(user, TransactionStatus.BLOCKED);
 
-        return Map.of(
-                "byCategory", byCategory,
-                "totalTransactions", totalTx,
-                "suspiciousBlocked", suspiciousCount
-        );
+        return SpendingSummaryResponse.builder()
+                .totalSpent(totalSpent)
+                .totalTransactions((long) transactions.size())
+                .blockedTransactions(blockedCount)
+                .categoryBreakdown(categoryBreakdown)
+                .build();
     }
 }

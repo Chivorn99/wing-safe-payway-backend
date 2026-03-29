@@ -3,14 +3,18 @@ package com.wingsafepay.wing_safe_pay.dto;
 import com.wingsafepay.wing_safe_pay.enums.PaymentContext;
 import com.wingsafepay.wing_safe_pay.enums.RiskLevel;
 import com.wingsafepay.wing_safe_pay.enums.TransactionCategory;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Getter;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.util.List;
 
-@Getter
+@Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class QRCheckResponse {
     private String recipientName;
     private String bankName;

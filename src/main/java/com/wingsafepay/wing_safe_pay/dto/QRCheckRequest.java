@@ -1,13 +1,11 @@
 package com.wingsafepay.wing_safe_pay.dto;
 
 import com.wingsafepay.wing_safe_pay.enums.PaymentContext;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
 
 import java.math.BigDecimal;
 
-@Getter
-@Setter
+@Data
 public class QRCheckRequest {
     private String merchantId;
     private String displayedName;

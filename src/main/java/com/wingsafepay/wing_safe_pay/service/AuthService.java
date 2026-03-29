@@ -17,14 +17,14 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
 
-    public AuthResponse register(AuthRequest request, String fullName) {
+    public AuthResponse register(AuthRequest request) {
         if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
             throw new RuntimeException("Phone number already registered");
         }
 
         User user = User.builder()
                 .phoneNumber(request.getPhoneNumber())
-                .fullName(fullName)
+                .fullName(request.getFullName())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .build();
 
