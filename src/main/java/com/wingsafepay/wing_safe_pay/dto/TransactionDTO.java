@@ -1,20 +1,25 @@
 package com.wingsafepay.wing_safe_pay.dto;
 
+import com.wingsafepay.wing_safe_pay.enums.PaymentContext;
 import com.wingsafepay.wing_safe_pay.enums.RiskLevel;
 import com.wingsafepay.wing_safe_pay.enums.TransactionCategory;
-import lombok.Data;
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import com.wingsafepay.wing_safe_pay.enums.TransactionStatus;
+import lombok.Getter;
+import lombok.Setter;
 
-@Data
+import java.math.BigDecimal;
+
+@Getter
+@Setter
 public class TransactionDTO {
-    private Long userId;
+    private String merchantId;
     private String recipientName;
-    private String recipientBank;
+    private String bankName;
     private BigDecimal amount;
     private String currency;
-    private RiskLevel riskLevel;
     private TransactionCategory category;
-    private boolean proceeded;
-    private LocalDateTime createdAt;
+    private RiskLevel riskLevel;
+    private PaymentContext paymentContext;
+    private TransactionStatus status;
+    private String note;
 }
