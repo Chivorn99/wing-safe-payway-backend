@@ -26,3 +26,6 @@ app:
   jwt:
     secret: ${JWT_SECRET}
     expiration: ${JWT_EXPIRATION}
+  tesseract:
+    path: ${TESSERACT_PATH}
+
