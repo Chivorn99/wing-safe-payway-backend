@@ -1,5 +1,6 @@
 package com.wingsafepay.wing_safe_pay.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.wingsafepay.wing_safe_pay.enums.PaymentContext;
 import com.wingsafepay.wing_safe_pay.enums.RiskLevel;
 import com.wingsafepay.wing_safe_pay.enums.TransactionCategory;
@@ -22,6 +23,7 @@ public class Transaction {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
