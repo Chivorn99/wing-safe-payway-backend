@@ -10,4 +10,5 @@ import java.util.List;
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
     List<Transaction> findByUserOrderByCreatedAtDesc(User user);
     long countByUserAndStatus(User user, TransactionStatus status);
+    long countByUser(User user);
 }
