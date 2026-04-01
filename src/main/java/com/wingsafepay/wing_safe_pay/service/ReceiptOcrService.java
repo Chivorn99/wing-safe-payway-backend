@@ -11,163 +11,164 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.imageio.ImageIO;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Service
 public class ReceiptOcrService {
 
+    private static final String TESSDATA_PATH =
+            System.getProperty("os.name").toLowerCase().contains("win")
+                    ? "C:/Program Files/Tesseract-OCR/tessdata"
+                    : "/usr/share/tesseract-ocr/4.00/tessdata";
+
     public ReceiptScanResponse scan(MultipartFile file) {
-        String raw = extractText(file);
-        return parseReceipt(raw);
+        String rawText = extractText(file);
+        return parseReceipt(rawText);
     }
 
     private String extractText(MultipartFile file) {
         try {
+            BufferedImage original = ImageIO.read(file.getInputStream());
+            if (original == null) {
+                return "";
+            }
+            BufferedImage preprocessed = preprocess(original);
+
             Tesseract tesseract = new Tesseract();
-            tesseract.setDatapath("C:/Program Files/Tesseract-OCR/tessdata");
+            tesseract.setDatapath(TESSDATA_PATH);
             tesseract.setLanguage("eng");
-            BufferedImage image = ImageIO.read(file.getInputStream());
-            return tesseract.doOCR(image);
+            tesseract.setPageSegMode(6);
+            tesseract.setOcrEngineMode(1);
+            tesseract.setVariable("tessedit_char_whitelist",
+                    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,: $/-\\n");
+
+            return tesseract.doOCR(preprocessed);
         } catch (TesseractException | IOException e) {
             return "";
         }
     }
 
+    private BufferedImage preprocess(BufferedImage source) {
+        int targetWidth = Math.max(source.getWidth(), 1800);
+        double scale = (double) targetWidth / source.getWidth();
+        int newHeight = (int) (source.getHeight() * scale);
+
+        BufferedImage scaled = new BufferedImage(targetWidth, newHeight, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = scaled.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+        g.drawImage(source, 0, 0, targetWidth, newHeight, null);
+        g.dispose();
+
+        BufferedImage result = new BufferedImage(targetWidth, newHeight, BufferedImage.TYPE_BYTE_GRAY);
+        Graphics2D g2 = result.createGraphics();
+        g2.drawImage(scaled, 0, 0, null);
+        g2.dispose();
+
+        return result;
+    }
+
     private ReceiptScanResponse parseReceipt(String text) {
         String lower = text.toLowerCase();
+        List<String> lines = List.of(text.split("\\n"));
+
+        BigDecimal amount = extractAmount(text);
+        String recipientName = extractMerchantName(lines);
+        String bankName = extractBankName(lower);
+        String currency = extractCurrency(text);
+        TransactionCategory category = guessCategory(lower);
 
         return ReceiptScanResponse.builder()
-                .recipientName(extractSeller(text))
-                .bankName(extractBank(text))
-                .amount(extractAmount(text))
-                .currency(extractCurrency(text))
-                .category(guessCategory(lower))
+                .recipientName(recipientName)
+                .bankName(bankName)
+                .amount(amount)
+                .currency(currency)
+                .category(category)
                 .riskLevel(RiskLevel.SAFE)
                 .paymentContext(PaymentContext.MERCHANT)
                 .status(TransactionStatus.PAID)
-                .note("Parsed from receipt - please review and correct")
+                .note("Auto-filled from receipt - please review")
                 .rawText(text.length() > 600 ? text.substring(0, 600) : text)
                 .build();
     }
 
     private BigDecimal extractAmount(String text) {
-        // Try labeled amount fields first: "original amount", "total", "amount"
-        String[] labels = {
-                "original amount[:\\s]+([\\d,\\.]+)",
-                "total[:\\s]+([\\d,\\.]+)",
-                "amount[:\\s]+([\\d,\\.]+)",
-                "grand total[:\\s]+([\\d,\\.]+)"
-        };
+        Pattern labeled = Pattern.compile(
+                "(?:total|grand total|amount due|subtotal|charged)[^\\d$]*(\\$?\\d{1,6}[.,]\\d{2})",
+                Pattern.CASE_INSENSITIVE
+        );
+        Matcher m = labeled.matcher(text);
+        if (m.find()) {
+            return parseMoney(m.group(1));
+        }
 
-        for (String label : labels) {
-            Pattern p = Pattern.compile(label, Pattern.CASE_INSENSITIVE);
-            Matcher m = p.matcher(text);
-            if (m.find()) {
-                BigDecimal parsed = parseAmountString(m.group(1));
-                if (parsed.compareTo(BigDecimal.ZERO) > 0) return parsed;
+        Pattern any = Pattern.compile("\\$?\\s*(\\d{1,6}[.,]\\d{2})");
+        Matcher anyM = any.matcher(text);
+        BigDecimal largest = BigDecimal.ZERO;
+        while (anyM.find()) {
+            BigDecimal v = parseMoney(anyM.group(1));
+            if (v.compareTo(largest) > 0) {
+                largest = v;
             }
         }
-
-        // Fallback: find largest number in text
-        Pattern anyNum = Pattern.compile("[\\d]{1,3}(?:[,\\s][\\d]{3})*(?:[.][\\d]{1,2})?");
-        Matcher m = anyNum.matcher(text);
-        BigDecimal largest = BigDecimal.ZERO;
-
-        while (m.find()) {
-            BigDecimal val = parseAmountString(m.group());
-            if (val.compareTo(largest) > 0) largest = val;
-        }
-
         return largest;
     }
 
-    /**
-     * Handles: "12,631.50" → 12631.50
-     *           "12.631,50" → 12631.50 (European)
-     *           "12631.50"  → 12631.50
-     *           "12,631"    → 12631
-     */
-    private BigDecimal parseAmountString(String raw) {
-        String s = raw.trim().replaceAll("\\s", "");
-
+    private BigDecimal parseMoney(String raw) {
         try {
-            // Format like 12,631.50 (comma=thousands, period=decimal)
-            if (s.matches("\\d{1,3}(,\\d{3})+(\\.[\\d]{1,2})?")) {
-                s = s.replace(",", "");
-                return new BigDecimal(s);
-            }
-
-            // Format like 12.631,50 (period=thousands, comma=decimal)
-            if (s.matches("\\d{1,3}(\\.\\d{3})+(,[\\d]{1,2})?")) {
-                s = s.replace(".", "").replace(",", ".");
-                return new BigDecimal(s);
-            }
-
-            // Plain number like 12631.50 or 12631
-            s = s.replace(",", "");
-            return new BigDecimal(s);
+            return new BigDecimal(raw.replace("$", "").replace(",", ".").trim());
         } catch (NumberFormatException e) {
             return BigDecimal.ZERO;
         }
     }
 
-    private String extractSeller(String text) {
-        // Try "Seller:" label first — most reliable
-        Pattern sellerPattern = Pattern.compile(
-                "(?:seller|merchant|store|shop)[:\\s]+([^\\n]+)",
-                Pattern.CASE_INSENSITIVE
-        );
-        Matcher m = sellerPattern.matcher(text);
-        if (m.find()) {
-            return m.group(1).trim();
-        }
-
-        // Try first clean-looking line of text (alphanumeric, no noise)
-        String[] lines = text.split("\\n");
+    private String extractMerchantName(List<String> lines) {
+        List<String> candidates = new ArrayList<>();
         for (String line : lines) {
-            String trimmed = line.trim();
-            if (trimmed.length() >= 3
-                    && trimmed.length() <= 60
-                    && trimmed.matches("[A-Z0-9][A-Za-z0-9 &'.,\\-]+")) {
-                return trimmed;
+            String t = line.trim();
+            if (t.length() < 3 || t.length() > 50) {
+                continue;
+            }
+            if (t.matches(".*\\d{2}/\\d{2}.*")) {
+                continue;
+            }
+            if (t.matches(".*\\$.*")) {
+                continue;
+            }
+            if (t.matches("[0-9\\s.,]+")) {
+                continue;
+            }
+            if (t.matches("[A-Za-z0-9 &'.,\\-]+")) {
+                candidates.add(t);
             }
         }
-
-        return "Unknown Merchant";
+        return candidates.isEmpty() ? "Unknown Merchant" : candidates.get(0);
     }
 
-    private String extractBank(String text) {
-        String upper = text.toUpperCase();
-
-        if (upper.contains("ABA")) return "ABA Bank";
-        if (upper.contains("ACLEDA")) return "ACLEDA Bank";
-        if (upper.contains("WING")) return "Wing Bank";
-        if (upper.contains("CANADIA")) return "Canadia Bank";
-        if (upper.contains("CAMBODIA POST")) return "Cambodia Post Bank";
-        if (upper.contains("MAYBANK")) return "Maybank";
-        if (upper.contains("ANZ")) return "ANZ Royal Bank";
-        if (upper.contains("BRED")) return "BRED Bank";
-        if (upper.contains("PRINCE")) return "Prince Bank";
-        if (upper.contains("AMRET")) return "Amret";
-        if (upper.contains("PRASAC")) return "PRASAC";
-
+    private String extractBankName(String lower) {
+        if (lower.contains("aba")) return "ABA Bank";
+        if (lower.contains("acleda")) return "ACLEDA Bank";
+        if (lower.contains("wing")) return "Wing Bank";
+        if (lower.contains("visa")) return "Visa";
+        if (lower.contains("mastercard")) return "Mastercard";
+        if (lower.contains("paypal")) return "PayPal";
+        if (lower.contains("stripe")) return "Stripe";
         return "Unknown";
     }
 
     private String extractCurrency(String text) {
         String upper = text.toUpperCase();
-
-        if (upper.contains("KHR")) return "KHR";
-        if (upper.contains("USD")) return "USD";
-        if (upper.contains("THB")) return "THB";
-        if (upper.contains("VND")) return "VND";
-        if (upper.contains("EUR")) return "EUR";
-        if (upper.contains("SGD")) return "SGD";
-
+        if (text.contains("$") || upper.contains("USD")) return "USD";
+        if (text.contains("\\u20AC") || upper.contains("EUR")) return "EUR";
+        if (upper.contains("KHR") || text.contains("\\u17DB")) return "KHR";
+        if (upper.contains("THB") || text.contains("\\u0E3F")) return "THB";
         return "USD";
     }
 
@@ -175,27 +176,39 @@ public class ReceiptOcrService {
         if (lower.contains("restaurant") || lower.contains("coffee")
                 || lower.contains("cafe") || lower.contains("food")
                 || lower.contains("burger") || lower.contains("pizza")
-                || lower.contains("noodle") || lower.contains("drink")) {
+                || lower.contains("noodle") || lower.contains("bbq")) {
             return TransactionCategory.FOOD;
         }
         if (lower.contains("grab") || lower.contains("taxi")
                 || lower.contains("parking") || lower.contains("fuel")
-                || lower.contains("transport") || lower.contains("bus")) {
+                || lower.contains("transport") || lower.contains("bus")
+                || lower.contains("train") || lower.contains("flight")) {
             return TransactionCategory.TRANSPORT;
         }
         if (lower.contains("pharmacy") || lower.contains("hospital")
-                || lower.contains("clinic") || lower.contains("health")) {
+                || lower.contains("clinic") || lower.contains("dental")
+                || lower.contains("health") || lower.contains("medical")) {
             return TransactionCategory.HEALTH;
         }
         if (lower.contains("electricity") || lower.contains("water")
                 || lower.contains("internet") || lower.contains("bill")
-                || lower.contains("utilities")) {
+                || lower.contains("utility") || lower.contains("telco")) {
             return TransactionCategory.UTILITIES;
         }
-        if (lower.contains("mart") || lower.contains("market")
-                || lower.contains("grocery") || lower.contains("supermarket")
-                || lower.contains("shop") || lower.contains("store")) {
+        if (lower.contains("mart") || lower.contains("supermarket")
+                || lower.contains("market") || lower.contains("grocery")
+                || lower.contains("fresh") || lower.contains("shop")) {
             return TransactionCategory.SHOPPING;
+        }
+        if (lower.contains("school") || lower.contains("university")
+                || lower.contains("tuition") || lower.contains("education")
+                || lower.contains("course") || lower.contains("book")) {
+            return TransactionCategory.EDUCATION;
+        }
+        if (lower.contains("cinema") || lower.contains("netflix")
+                || lower.contains("spotify") || lower.contains("game")
+                || lower.contains("entertainment")) {
+            return TransactionCategory.ENTERTAINMENT;
         }
         return TransactionCategory.OTHER;
     }
