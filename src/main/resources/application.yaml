@@ -28,4 +28,3 @@ app:
     expiration: ${JWT_EXPIRATION}
   tesseract:
     path: ${TESSERACT_PATH}
-

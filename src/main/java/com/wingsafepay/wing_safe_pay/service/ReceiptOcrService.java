@@ -9,6 +9,8 @@ import net.sourceforge.tess4j.Tesseract;
 import net.sourceforge.tess4j.TesseractException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.beans.factory.annotation.Value;
+import lombok.RequiredArgsConstructor;
 
 import javax.imageio.ImageIO;
 import java.awt.Graphics2D;
@@ -22,12 +24,11 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Service
+@RequiredArgsConstructor
 public class ReceiptOcrService {
 
-    private static final String TESSDATA_PATH =
-            System.getProperty("os.name").toLowerCase().contains("win")
-                    ? "C:/Program Files/Tesseract-OCR/tessdata"
-                    : "/usr/share/tesseract-ocr/4.00/tessdata";
+    @Value("${app.tesseract.path}")
+    private String tessDataPath;
 
     public ReceiptScanResponse scan(MultipartFile file) {
         String rawText = extractText(file);
@@ -43,7 +44,7 @@ public class ReceiptOcrService {
             BufferedImage preprocessed = preprocess(original);
 
             Tesseract tesseract = new Tesseract();
-            tesseract.setDatapath(TESSDATA_PATH);
+            tesseract.setDatapath(tessDataPath);
             tesseract.setLanguage("eng");
             tesseract.setPageSegMode(6);
             tesseract.setOcrEngineMode(1);
