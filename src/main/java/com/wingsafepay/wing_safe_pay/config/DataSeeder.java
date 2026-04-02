@@ -33,8 +33,9 @@ public class DataSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        // ── Always seed admin user if missing ────────────────────────────────
-        if (!userRepository.existsByPhoneNumber(ADMIN_PHONE)) {
+        // ── Always ensure admin user exists with ADMIN role ──────────────────
+        var existingAdmin = userRepository.findByPhoneNumber(ADMIN_PHONE);
+        if (existingAdmin.isEmpty()) {
             User admin = User.builder()
                     .phoneNumber(ADMIN_PHONE)
                     .fullName("Admin WingView")
@@ -42,7 +43,12 @@ public class DataSeeder implements CommandLineRunner {
                     .role(Role.ADMIN)
                     .build();
             userRepository.save(admin);
-            log.info("✅ Admin user seeded (phone: {}, password: admin123)", ADMIN_PHONE);
+            log.info("✅ Admin user created (phone: {}, password: admin123)", ADMIN_PHONE);
+        } else if (existingAdmin.get().getRole() != Role.ADMIN) {
+            User admin = existingAdmin.get();
+            admin.setRole(Role.ADMIN);
+            userRepository.save(admin);
+            log.info("✅ Admin user upgraded to ADMIN role (phone: {})", ADMIN_PHONE);
         }
 
         if (userRepository.existsByPhoneNumber(DEMO_PHONE)) {
