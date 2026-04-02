@@ -3,12 +3,11 @@ package com.wingsafepay.wing_safe_pay.service;
 import com.wingsafepay.wing_safe_pay.dto.SpendingSummaryResponse;
 import com.wingsafepay.wing_safe_pay.dto.TransactionDTO;
 import com.wingsafepay.wing_safe_pay.dto.TransactionResponse;
+import com.wingsafepay.wing_safe_pay.enums.TransactionCategory;
 import com.wingsafepay.wing_safe_pay.enums.TransactionStatus;
 import com.wingsafepay.wing_safe_pay.exception.NotFoundException;
-import com.wingsafepay.wing_safe_pay.model.Merchant;
 import com.wingsafepay.wing_safe_pay.model.Transaction;
 import com.wingsafepay.wing_safe_pay.model.User;
-import com.wingsafepay.wing_safe_pay.repository.MerchantRepository;
 import com.wingsafepay.wing_safe_pay.repository.TransactionRepository;
 import com.wingsafepay.wing_safe_pay.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +24,6 @@ public class TransactionService {
 
     private final TransactionRepository transactionRepository;
     private final UserRepository userRepository;
-    private final MerchantRepository merchantRepository;
 
     public TransactionResponse saveTransaction(String phoneNumber, TransactionDTO dto) {
         User user = userRepository.findByPhoneNumber(phoneNumber)
@@ -43,11 +41,6 @@ public class TransactionService {
                 .status(dto.getStatus())
                 .note(dto.getNote())
                 .build();
-
-        if (dto.getMerchantId() != null && !dto.getMerchantId().isBlank()) {
-            Merchant merchant = merchantRepository.findByMerchantId(dto.getMerchantId()).orElse(null);
-            tx.setMerchant(merchant);
-        }
 
         return toResponse(transactionRepository.save(tx));
     }
@@ -88,6 +81,22 @@ public class TransactionService {
                 .blockedTransactions(blockedCount)
                 .categoryBreakdown(categoryBreakdown)
                 .build();
+    }
+
+    // Uses explicit JOIN query — filter transactions by category
+    public List<TransactionResponse> filterByCategory(String phoneNumber, TransactionCategory category) {
+        return transactionRepository.findByUserPhoneAndCategory(phoneNumber, category)
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    // Uses explicit JOIN query — search transactions by keyword
+    public List<TransactionResponse> searchTransactions(String phoneNumber, String keyword) {
+        return transactionRepository.searchByKeyword(phoneNumber, keyword)
+                .stream()
+                .map(this::toResponse)
+                .toList();
     }
 
     private TransactionResponse toResponse(Transaction tx) {

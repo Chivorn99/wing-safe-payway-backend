@@ -1,6 +1,7 @@
 package com.wingsafepay.wing_safe_pay.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.wingsafepay.wing_safe_pay.enums.Role;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
@@ -27,6 +28,11 @@ public class User {
     @Column(nullable = false)
     private String password;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private Role role = Role.USER;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -34,8 +40,13 @@ public class User {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
     private List<Transaction> transactions;
 
+    @JsonIgnore
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    private List<SavingGoal> savingGoals;
+
     @PrePersist
     protected void onCreate() {
         if (this.createdAt == null) this.createdAt = LocalDateTime.now();
+        if (this.role == null) this.role = Role.USER;
     }
 }

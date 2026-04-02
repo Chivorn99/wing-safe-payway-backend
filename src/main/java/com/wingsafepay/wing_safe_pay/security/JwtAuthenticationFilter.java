@@ -35,12 +35,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             if (jwtUtil.isTokenValid(token)) {
                 String phoneNumber = jwtUtil.extractPhoneNumber(token);
+                String role = jwtUtil.extractRole(token);
+
+                // Build authority from JWT role claim (e.g. "ADMIN" -> ROLE_ADMIN)
+                String authority = "ROLE_" + (role != null ? role : "USER");
 
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(
                                 phoneNumber,
                                 null,
-                                List.of(new SimpleGrantedAuthority("ROLE_USER"))
+                                List.of(new SimpleGrantedAuthority(authority))
                         );
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);

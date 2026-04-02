@@ -29,6 +29,7 @@ public class DataSeeder implements CommandLineRunner {
     private final PasswordEncoder passwordEncoder;
 
     private static final String DEMO_PHONE = "0961234567";
+    private static final String ADMIN_PHONE = "0960000000";
 
     @Override
     public void run(String... args) {
@@ -39,13 +40,26 @@ public class DataSeeder implements CommandLineRunner {
 
         log.info("🌱 Seeding demo data...");
 
-        // ── 1. Create demo user ──────────────────────────────────────────────
+        // ── 1. Create demo user (role: USER) ─────────────────────────────────
         User user = User.builder()
                 .phoneNumber(DEMO_PHONE)
                 .fullName("Chivorn Sok")
                 .password(passwordEncoder.encode("123456"))
+                .role(Role.USER)
                 .build();
         user = userRepository.save(user);
+
+        // ── 1b. Create admin user (role: ADMIN) ──────────────────────────────
+        if (!userRepository.existsByPhoneNumber(ADMIN_PHONE)) {
+            User admin = User.builder()
+                    .phoneNumber(ADMIN_PHONE)
+                    .fullName("Admin WingView")
+                    .password(passwordEncoder.encode("admin123"))
+                    .role(Role.ADMIN)
+                    .build();
+            userRepository.save(admin);
+            log.info("   ✅ Admin user seeded (phone: {}, password: admin123)", ADMIN_PHONE);
+        }
 
         // ── 2. Seed transactions (last 3 months) ────────────────────────────
         LocalDateTime now = LocalDateTime.now();

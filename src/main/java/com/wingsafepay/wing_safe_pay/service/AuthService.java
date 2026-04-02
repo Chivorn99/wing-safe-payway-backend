@@ -37,7 +37,7 @@ public class AuthService {
 
         userRepository.save(user);
 
-        String token = jwtUtil.generateToken(user.getPhoneNumber());
+        String token = jwtUtil.generateToken(user.getPhoneNumber(), user.getRole().name());
         return new AuthResponse(token, user.getFullName(), user.getId());
     }
 
@@ -49,7 +49,7 @@ public class AuthService {
             throw new UnauthorizedException("Invalid phone number or password");
         }
 
-        String token = jwtUtil.generateToken(user.getPhoneNumber());
+        String token = jwtUtil.generateToken(user.getPhoneNumber(), user.getRole().name());
         return new AuthResponse(token, user.getFullName(), user.getId());
     }
 }
