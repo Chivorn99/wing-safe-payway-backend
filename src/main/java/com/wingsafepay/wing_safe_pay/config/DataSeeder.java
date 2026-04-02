@@ -28,11 +28,23 @@ public class DataSeeder implements CommandLineRunner {
     private final SavingGoalRepository savingGoalRepository;
     private final PasswordEncoder passwordEncoder;
 
-    private static final String DEMO_PHONE = "0961234567";
+    private static final String DEMO_PHONE = "0961998877";
     private static final String ADMIN_PHONE = "0960000000";
 
     @Override
     public void run(String... args) {
+        // ── Always seed admin user if missing ────────────────────────────────
+        if (!userRepository.existsByPhoneNumber(ADMIN_PHONE)) {
+            User admin = User.builder()
+                    .phoneNumber(ADMIN_PHONE)
+                    .fullName("Admin WingView")
+                    .password(passwordEncoder.encode("admin123"))
+                    .role(Role.ADMIN)
+                    .build();
+            userRepository.save(admin);
+            log.info("✅ Admin user seeded (phone: {}, password: admin123)", ADMIN_PHONE);
+        }
+
         if (userRepository.existsByPhoneNumber(DEMO_PHONE)) {
             log.info("⏭️  Demo user already exists, skipping seed.");
             return;
@@ -48,18 +60,6 @@ public class DataSeeder implements CommandLineRunner {
                 .role(Role.USER)
                 .build();
         user = userRepository.save(user);
-
-        // ── 1b. Create admin user (role: ADMIN) ──────────────────────────────
-        if (!userRepository.existsByPhoneNumber(ADMIN_PHONE)) {
-            User admin = User.builder()
-                    .phoneNumber(ADMIN_PHONE)
-                    .fullName("Admin WingView")
-                    .password(passwordEncoder.encode("admin123"))
-                    .role(Role.ADMIN)
-                    .build();
-            userRepository.save(admin);
-            log.info("   ✅ Admin user seeded (phone: {}, password: admin123)", ADMIN_PHONE);
-        }
 
         // ── 2. Seed transactions (last 3 months) ────────────────────────────
         LocalDateTime now = LocalDateTime.now();
