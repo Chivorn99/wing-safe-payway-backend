@@ -35,6 +35,12 @@ public class SavingGoal {
 
     private LocalDate deadline;
 
+    @Column(length = 10)
+    private String currency;
+
+    @Column(length = 10)
+    private String emoji;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private SavingGoalStatus status;
@@ -47,5 +53,7 @@ public class SavingGoal {
         this.createdAt = LocalDateTime.now();
         if (this.currentAmount == null) this.currentAmount = BigDecimal.ZERO;
         if (this.status == null) this.status = SavingGoalStatus.ACTIVE;
+        if (this.currency == null) this.currency = "USD";
+        if (this.emoji == null) this.emoji = "🎯";
     }
 }

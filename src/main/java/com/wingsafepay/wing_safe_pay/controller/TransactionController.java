@@ -2,8 +2,9 @@ package com.wingsafepay.wing_safe_pay.controller;
 
 import com.wingsafepay.wing_safe_pay.dto.SpendingSummaryResponse;
 import com.wingsafepay.wing_safe_pay.dto.TransactionDTO;
-import com.wingsafepay.wing_safe_pay.model.Transaction;
+import com.wingsafepay.wing_safe_pay.dto.TransactionResponse;
 import com.wingsafepay.wing_safe_pay.service.TransactionService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -19,16 +20,16 @@ public class TransactionController {
     private final TransactionService transactionService;
 
     @PostMapping
-    public ResponseEntity<Transaction> saveTransaction(
+    public ResponseEntity<TransactionResponse> saveTransaction(
             Authentication authentication,
-            @RequestBody TransactionDTO dto
+            @Valid @RequestBody TransactionDTO dto
     ) {
         String phoneNumber = authentication.getName();
         return ResponseEntity.ok(transactionService.saveTransaction(phoneNumber, dto));
     }
 
     @GetMapping("/me")
-    public ResponseEntity<List<Transaction>> getMyTransactions(Authentication authentication) {
+    public ResponseEntity<List<TransactionResponse>> getMyTransactions(Authentication authentication) {
         String phoneNumber = authentication.getName();
         return ResponseEntity.ok(transactionService.getUserTransactions(phoneNumber));
     }

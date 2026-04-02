@@ -4,6 +4,8 @@ import com.wingsafepay.wing_safe_pay.dto.GoalProgressRequest;
 import com.wingsafepay.wing_safe_pay.dto.SavingGoalRequest;
 import com.wingsafepay.wing_safe_pay.dto.SavingGoalResponse;
 import com.wingsafepay.wing_safe_pay.enums.SavingGoalStatus;
+import com.wingsafepay.wing_safe_pay.exception.ForbiddenException;
+import com.wingsafepay.wing_safe_pay.exception.NotFoundException;
 import com.wingsafepay.wing_safe_pay.model.SavingGoal;
 import com.wingsafepay.wing_safe_pay.model.User;
 import com.wingsafepay.wing_safe_pay.repository.SavingGoalRepository;
@@ -23,13 +25,16 @@ public class SavingGoalService {
     private final UserRepository userRepository;
 
     public SavingGoalResponse create(String phoneNumber, SavingGoalRequest request) {
-        User user = userRepository.findByPhoneNumber(phoneNumber).orElseThrow();
+        User user = userRepository.findByPhoneNumber(phoneNumber)
+                .orElseThrow(() -> new NotFoundException("User not found"));
 
         SavingGoal goal = SavingGoal.builder()
                 .user(user)
                 .title(request.getTitle())
                 .targetAmount(request.getTargetAmount())
                 .deadline(request.getDeadline())
+                .currency(request.getCurrency() != null ? request.getCurrency() : "USD")
+                .emoji(request.getEmoji() != null ? request.getEmoji() : "🎯")
                 .currentAmount(BigDecimal.ZERO)
                 .status(SavingGoalStatus.ACTIVE)
                 .build();
@@ -38,15 +43,26 @@ public class SavingGoalService {
     }
 
     public List<SavingGoalResponse> getUserGoals(String phoneNumber) {
-        User user = userRepository.findByPhoneNumber(phoneNumber).orElseThrow();
+        User user = userRepository.findByPhoneNumber(phoneNumber)
+                .orElseThrow(() -> new NotFoundException("User not found"));
         return savingGoalRepository.findByUserOrderByCreatedAtDesc(user)
                 .stream()
                 .map(this::toResponse)
                 .toList();
     }
 
-    public SavingGoalResponse addProgress(Long goalId, GoalProgressRequest request) {
-        SavingGoal goal = savingGoalRepository.findById(goalId).orElseThrow();
+    public SavingGoalResponse addProgress(String phoneNumber, Long goalId, GoalProgressRequest request) {
+        User user = userRepository.findByPhoneNumber(phoneNumber)
+                .orElseThrow(() -> new NotFoundException("User not found"));
+
+        SavingGoal goal = savingGoalRepository.findById(goalId)
+                .orElseThrow(() -> new NotFoundException("Goal not found"));
+
+        // Ownership check
+        if (!goal.getUser().getId().equals(user.getId())) {
+            throw new ForbiddenException("You do not own this goal");
+        }
+
         goal.setCurrentAmount(goal.getCurrentAmount().add(request.getAmount()));
 
         if (goal.getCurrentAmount().compareTo(goal.getTargetAmount()) >= 0) {
@@ -54,6 +70,21 @@ public class SavingGoalService {
         }
 
         return toResponse(savingGoalRepository.save(goal));
+    }
+
+    public void deleteGoal(String phoneNumber, Long goalId) {
+        User user = userRepository.findByPhoneNumber(phoneNumber)
+                .orElseThrow(() -> new NotFoundException("User not found"));
+
+        SavingGoal goal = savingGoalRepository.findById(goalId)
+                .orElseThrow(() -> new NotFoundException("Goal not found"));
+
+        // Ownership check
+        if (!goal.getUser().getId().equals(user.getId())) {
+            throw new ForbiddenException("You do not own this goal");
+        }
+
+        savingGoalRepository.delete(goal);
     }
 
     private SavingGoalResponse toResponse(SavingGoal goal) {
@@ -73,6 +104,9 @@ public class SavingGoalService {
                 .progressPercent(percent)
                 .deadline(goal.getDeadline())
                 .status(goal.getStatus())
+                .currency(goal.getCurrency())
+                .emoji(goal.getEmoji())
+                .createdAt(goal.getCreatedAt())
                 .build();
     }
 }

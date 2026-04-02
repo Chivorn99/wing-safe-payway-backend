@@ -2,7 +2,9 @@ package com.wingsafepay.wing_safe_pay.service;
 
 import com.wingsafepay.wing_safe_pay.dto.SpendingSummaryResponse;
 import com.wingsafepay.wing_safe_pay.dto.TransactionDTO;
+import com.wingsafepay.wing_safe_pay.dto.TransactionResponse;
 import com.wingsafepay.wing_safe_pay.enums.TransactionStatus;
+import com.wingsafepay.wing_safe_pay.exception.NotFoundException;
 import com.wingsafepay.wing_safe_pay.model.Merchant;
 import com.wingsafepay.wing_safe_pay.model.Transaction;
 import com.wingsafepay.wing_safe_pay.model.User;
@@ -25,8 +27,9 @@ public class TransactionService {
     private final UserRepository userRepository;
     private final MerchantRepository merchantRepository;
 
-    public Transaction saveTransaction(String phoneNumber, TransactionDTO dto) {
-        User user = userRepository.findByPhoneNumber(phoneNumber).orElseThrow();
+    public TransactionResponse saveTransaction(String phoneNumber, TransactionDTO dto) {
+        User user = userRepository.findByPhoneNumber(phoneNumber)
+                .orElseThrow(() -> new NotFoundException("User not found"));
 
         Transaction tx = Transaction.builder()
                 .user(user)
@@ -46,16 +49,21 @@ public class TransactionService {
             tx.setMerchant(merchant);
         }
 
-        return transactionRepository.save(tx);
+        return toResponse(transactionRepository.save(tx));
     }
 
-    public List<Transaction> getUserTransactions(String phoneNumber) {
-        User user = userRepository.findByPhoneNumber(phoneNumber).orElseThrow();
-        return transactionRepository.findByUserOrderByCreatedAtDesc(user);
+    public List<TransactionResponse> getUserTransactions(String phoneNumber) {
+        User user = userRepository.findByPhoneNumber(phoneNumber)
+                .orElseThrow(() -> new NotFoundException("User not found"));
+        return transactionRepository.findByUserOrderByCreatedAtDesc(user)
+                .stream()
+                .map(this::toResponse)
+                .toList();
     }
 
     public SpendingSummaryResponse getSummary(String phoneNumber) {
-        User user = userRepository.findByPhoneNumber(phoneNumber).orElseThrow();
+        User user = userRepository.findByPhoneNumber(phoneNumber)
+                .orElseThrow(() -> new NotFoundException("User not found"));
         List<Transaction> transactions = transactionRepository.findByUserOrderByCreatedAtDesc(user);
 
         BigDecimal totalSpent = transactions.stream()
@@ -79,6 +87,22 @@ public class TransactionService {
                 .totalTransactions((long) transactions.size())
                 .blockedTransactions(blockedCount)
                 .categoryBreakdown(categoryBreakdown)
+                .build();
+    }
+
+    private TransactionResponse toResponse(Transaction tx) {
+        return TransactionResponse.builder()
+                .id(tx.getId())
+                .recipientName(tx.getRecipientName())
+                .bankName(tx.getBankName())
+                .amount(tx.getAmount())
+                .currency(tx.getCurrency())
+                .category(tx.getCategory().name())
+                .riskLevel(tx.getRiskLevel().name())
+                .paymentContext(tx.getPaymentContext().name())
+                .status(tx.getStatus().name())
+                .note(tx.getNote())
+                .createdAt(tx.getCreatedAt())
                 .build();
     }
 }

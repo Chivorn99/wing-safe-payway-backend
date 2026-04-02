@@ -3,6 +3,7 @@ package com.wingsafepay.wing_safe_pay.controller;
 import com.wingsafepay.wing_safe_pay.dto.ChangePasswordRequest;
 import com.wingsafepay.wing_safe_pay.dto.UserProfileResponse;
 import com.wingsafepay.wing_safe_pay.service.UserService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -23,7 +24,7 @@ public class UserController {
     @PutMapping("/change-password")
     public ResponseEntity<Void> changePassword(
             Authentication auth,
-            @RequestBody ChangePasswordRequest request
+            @Valid @RequestBody ChangePasswordRequest request
     ) {
         userService.changePassword(auth.getName(), request);
         return ResponseEntity.ok().build();

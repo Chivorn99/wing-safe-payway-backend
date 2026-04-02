@@ -4,6 +4,7 @@ import com.wingsafepay.wing_safe_pay.dto.GoalProgressRequest;
 import com.wingsafepay.wing_safe_pay.dto.SavingGoalRequest;
 import com.wingsafepay.wing_safe_pay.dto.SavingGoalResponse;
 import com.wingsafepay.wing_safe_pay.service.SavingGoalService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -21,7 +22,7 @@ public class SavingGoalController {
     @PostMapping
     public ResponseEntity<SavingGoalResponse> createGoal(
             Authentication authentication,
-            @RequestBody SavingGoalRequest request
+            @Valid @RequestBody SavingGoalRequest request
     ) {
         String phoneNumber = authentication.getName();
         return ResponseEntity.ok(savingGoalService.create(phoneNumber, request));
@@ -35,9 +36,21 @@ public class SavingGoalController {
 
     @PatchMapping("/{goalId}/progress")
     public ResponseEntity<SavingGoalResponse> addProgress(
+            Authentication authentication,
             @PathVariable Long goalId,
-            @RequestBody GoalProgressRequest request
+            @Valid @RequestBody GoalProgressRequest request
     ) {
-        return ResponseEntity.ok(savingGoalService.addProgress(goalId, request));
+        String phoneNumber = authentication.getName();
+        return ResponseEntity.ok(savingGoalService.addProgress(phoneNumber, goalId, request));
+    }
+
+    @DeleteMapping("/{goalId}")
+    public ResponseEntity<Void> deleteGoal(
+            Authentication authentication,
+            @PathVariable Long goalId
+    ) {
+        String phoneNumber = authentication.getName();
+        savingGoalService.deleteGoal(phoneNumber, goalId);
+        return ResponseEntity.noContent().build();
     }
 }

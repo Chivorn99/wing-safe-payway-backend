@@ -2,6 +2,8 @@ package com.wingsafepay.wing_safe_pay.service;
 
 import com.wingsafepay.wing_safe_pay.dto.ChangePasswordRequest;
 import com.wingsafepay.wing_safe_pay.dto.UserProfileResponse;
+import com.wingsafepay.wing_safe_pay.exception.BadRequestException;
+import com.wingsafepay.wing_safe_pay.exception.NotFoundException;
 import com.wingsafepay.wing_safe_pay.model.User;
 import com.wingsafepay.wing_safe_pay.repository.TransactionRepository;
 import com.wingsafepay.wing_safe_pay.repository.UserRepository;
@@ -18,7 +20,8 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
 
     public UserProfileResponse getProfile(String phoneNumber) {
-        User user = userRepository.findByPhoneNumber(phoneNumber).orElseThrow();
+        User user = userRepository.findByPhoneNumber(phoneNumber)
+                .orElseThrow(() -> new NotFoundException("User not found"));
         long total = transactionRepository.countByUser(user);
         return new UserProfileResponse(
                 user.getId(),
@@ -30,10 +33,11 @@ public class UserService {
     }
 
     public void changePassword(String phoneNumber, ChangePasswordRequest request) {
-        User user = userRepository.findByPhoneNumber(phoneNumber).orElseThrow();
+        User user = userRepository.findByPhoneNumber(phoneNumber)
+                .orElseThrow(() -> new NotFoundException("User not found"));
 
         if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
-            throw new RuntimeException("Current password is incorrect");
+            throw new BadRequestException("Current password is incorrect");
         }
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
