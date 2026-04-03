@@ -48,8 +48,6 @@ public class ReceiptOcrService {
             tesseract.setLanguage("eng");
             tesseract.setPageSegMode(6);
             tesseract.setOcrEngineMode(1);
-            tesseract.setVariable("tessedit_char_whitelist",
-                    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,: $/-\\n");
 
             return tesseract.doOCR(preprocessed);
         } catch (TesseractException | IOException e) {
@@ -58,20 +56,34 @@ public class ReceiptOcrService {
     }
 
     private BufferedImage preprocess(BufferedImage source) {
-        int targetWidth = Math.max(source.getWidth(), 1800);
-        double scale = (double) targetWidth / source.getWidth();
-        int newHeight = (int) (source.getHeight() * scale);
+        int maxWidth = 1200;
+        int w = source.getWidth();
+        int h = source.getHeight();
 
-        BufferedImage scaled = new BufferedImage(targetWidth, newHeight, BufferedImage.TYPE_INT_RGB);
-        Graphics2D g = scaled.createGraphics();
-        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
-        g.drawImage(source, 0, 0, targetWidth, newHeight, null);
+        // Only resize if image is too large (downscale) or too small (upscale)
+        if (w > maxWidth) {
+            double scale = (double) maxWidth / w;
+            w = maxWidth;
+            h = (int) (h * scale);
+        } else if (w < 600) {
+            double scale = 600.0 / w;
+            w = 600;
+            h = (int) (h * scale);
+        } else {
+            // Image is already a good size — just convert to grayscale
+            BufferedImage gray = new BufferedImage(w, h, BufferedImage.TYPE_BYTE_GRAY);
+            Graphics2D g = gray.createGraphics();
+            g.drawImage(source, 0, 0, null);
+            g.dispose();
+            return gray;
+        }
+
+        // Resize + grayscale in one pass
+        BufferedImage result = new BufferedImage(w, h, BufferedImage.TYPE_BYTE_GRAY);
+        Graphics2D g = result.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        g.drawImage(source, 0, 0, w, h, null);
         g.dispose();
-
-        BufferedImage result = new BufferedImage(targetWidth, newHeight, BufferedImage.TYPE_BYTE_GRAY);
-        Graphics2D g2 = result.createGraphics();
-        g2.drawImage(scaled, 0, 0, null);
-        g2.dispose();
 
         return result;
     }

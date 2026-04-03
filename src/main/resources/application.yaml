@@ -9,7 +9,7 @@ spring:
       minimum-idle: 1
       max-lifetime: 120000
       idle-timeout: 60000
-      connection-timeout: 20000
+      connection-timeout: 30000
       keepalive-time: 30000
 
   jpa:
@@ -19,7 +19,6 @@ spring:
     defer-datasource-initialization: true
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
 
   sql:
