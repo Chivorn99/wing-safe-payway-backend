@@ -12,8 +12,8 @@ WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 
 # Install Tesseract OCR
-RUN apk add --no-cache tesseract-ocr
+RUN apk add --no-cache tesseract-ocr tesseract-ocr-data-eng
 
-EXPOSE 8081
+EXPOSE 8080
 
 ENTRYPOINT ["java", "-jar", "app.jar"]

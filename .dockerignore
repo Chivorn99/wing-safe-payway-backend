@@ -1,0 +1,11 @@
+.git
+.idea
+.vscode
+.env
+.env.*
+target
+*.md
+*.txt
+docker-compose.yml
+compile_output.txt
+test_output.txt

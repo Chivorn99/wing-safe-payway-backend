@@ -47,4 +47,6 @@ jobs:
           JWT_EXPIRATION: 86400000
           SERVER_PORT: 8081
           TESSERACT_PATH: /usr/bin/tesseract
-        run: ./mvnw clean verify --no-transfer-progress
+        run: |
+          chmod +x mvnw
+          ./mvnw clean verify --no-transfer-progress
