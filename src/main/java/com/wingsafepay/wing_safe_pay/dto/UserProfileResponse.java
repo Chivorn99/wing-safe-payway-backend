@@ -13,4 +13,5 @@ public class UserProfileResponse {
     private String phoneNumber;
     private LocalDateTime createdAt;
     private long totalTransactions;
+    private String profileImage;
 }

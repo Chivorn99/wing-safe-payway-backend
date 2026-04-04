@@ -33,6 +33,9 @@ public class User {
     @Builder.Default
     private Role role = Role.USER;
 
+    @Column(columnDefinition = "TEXT")
+    private String profileImage;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

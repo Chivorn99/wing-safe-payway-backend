@@ -1,6 +1,7 @@
 package com.wingsafepay.wing_safe_pay.controller;
 
 import com.wingsafepay.wing_safe_pay.dto.ChangePasswordRequest;
+import com.wingsafepay.wing_safe_pay.dto.UpdateProfileRequest;
 import com.wingsafepay.wing_safe_pay.dto.UserProfileResponse;
 import com.wingsafepay.wing_safe_pay.service.UserService;
 import jakarta.validation.Valid;
@@ -19,6 +20,14 @@ public class UserController {
     @GetMapping("/me")
     public ResponseEntity<UserProfileResponse> getProfile(Authentication auth) {
         return ResponseEntity.ok(userService.getProfile(auth.getName()));
+    }
+
+    @PutMapping("/me")
+    public ResponseEntity<UserProfileResponse> updateProfile(
+            Authentication auth,
+            @RequestBody UpdateProfileRequest request
+    ) {
+        return ResponseEntity.ok(userService.updateProfile(auth.getName(), request));
     }
 
     @PutMapping("/change-password")
