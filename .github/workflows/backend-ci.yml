@@ -1,4 +1,4 @@
-name: Backend CI
+name: Backend CI/CD
 
 on:
   push:
@@ -10,6 +10,7 @@ on:
     branches: [ main ]
 
 jobs:
+  # (Testing in GitHub's Cloud)
   build:
     runs-on: ubuntu-latest
 
@@ -50,3 +51,18 @@ jobs:
         run: |
           chmod +x mvnw
           ./mvnw clean verify --no-transfer-progress
+
+  # (Deploying to Ubuntu Server)
+  deploy:
+    needs: build 
+    runs-on: self-hosted
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Pull and Rebuild Backend on Server
+        run: |
+          cd ~/loyfinance-staging/backend
+          git pull origin main
+          
+          cd ~/loyfinance-staging
+          docker compose up -d --build backend
